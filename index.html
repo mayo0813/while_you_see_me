@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>네가 보는 동안만</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 비 오는 밤의 쓸쓸한 구원 이야기를 90년대 PC-98 미연시 화면으로
+   IDEA: 오래된 PC 게임 화면, 장면 창 + 정보 패널 + 대사창 + 아래 버튼 줄이 액자처럼 짜인 틀
+   PICTURE: 도트 배경과 도트 스탠딩이 들어간 장면 창, 금줄 장식이 대사창 위에 걸림
+   COLOUR and TYPE: 남색 금속 틀, 밝은 하늘색 테두리, 따뜻한 짚 색 하나 / 16px 도트 글꼴 Unifont
+   LAYOUT: 가로 640x400, 세로 360x640 고정 화면을 창 크기에 맞춰 확대 */
+@font-face{font-family:"PX";src:url(font/pixel.woff) format("woff");font-display:block}
+:root{color-scheme:dark;--fr0:#03060d;--fr1:#0c1630;--fr2:#16264a;--fr3:#2a4677;--hi:#7fa6dc;--hi2:#c9dcf5;--ink:#e8eef8;--dim:#8ea2c4;--blue:#8fd0ff;--straw:#d8b46e}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:var(--fr0);color:var(--ink);overflow:hidden}
+body{font:16px/1.5 "PX","Gowun Dodum",monospace;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:none;font-smooth:never}
+button{font:16px/1 "PX",monospace;color:var(--ink);cursor:pointer}
+#stage{position:fixed;inset:0;overflow:hidden;user-select:none;background:repeating-conic-gradient(#050913 0 25%,#070c18 0 50%) 0 0/4px 4px}
+#screen{position:absolute;left:50%;top:50%;width:640px;height:400px;transform-origin:center;background:var(--fr1);box-shadow:0 0 0 2px var(--fr0),0 0 0 4px var(--fr3),0 0 0 6px var(--fr0),0 20px 60px #000}
+#screen::before{content:"";position:absolute;inset:0;background:repeating-conic-gradient(var(--fr1) 0 25%,var(--fr2) 0 50%) 0 0/2px 2px;opacity:.55}
+.pn{position:absolute;background:var(--fr0);border:2px solid;border-color:var(--hi) var(--fr0) var(--fr0) var(--hi);box-shadow:0 0 0 2px var(--fr2),0 0 0 3px var(--fr0),inset 0 0 0 1px var(--fr3)}
+#scene{left:8px;top:8px;width:456px;height:257px;overflow:hidden}
+#side{left:476px;top:8px;width:156px;height:257px;padding:8px;display:flex;flex-direction:column;gap:6px;background:linear-gradient(var(--fr1),var(--fr0))}
+#box{left:8px;top:279px;width:624px;height:90px;padding:10px 14px;cursor:pointer}
+#bar{position:absolute;left:8px;top:376px;width:624px;height:18px;display:flex;gap:6px;justify-content:flex-end}
+#bar button{flex:0 0 auto;height:18px;padding:0 10px;font-size:12px;letter-spacing:.06em;background:var(--fr2);border:1px solid;border-color:var(--hi) var(--fr0) var(--fr0) var(--hi);color:var(--hi2)}
+#bar button:hover,#bar button:focus-visible{background:var(--fr3);color:#fff;outline:none}
+#bar button.on{background:var(--hi);color:var(--fr0)}
+.bg{position:absolute;inset:0;background:#05070c center/cover no-repeat;image-rendering:pixelated;image-rendering:crisp-edges}
+canvas#rain{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;transition:opacity 1s}
+#sprite{position:absolute;left:50%;bottom:0;height:100%;transform:translateX(-50%);transition:opacity .8s,filter .8s;opacity:0;pointer-events:none}
+#sprite,#win img,.face img{image-rendering:pixelated;image-rendering:crisp-edges}
+#sprite.on{opacity:1}#sprite.faint{opacity:.55;filter:saturate(.5) brightness(1.15)}
+#sprite.glitch{animation:gl .9s steps(2) 1}
+@keyframes gl{0%,100%{opacity:1;transform:translateX(-50%)}20%{opacity:.25;transform:translateX(calc(-50% + 6px))}40%{opacity:.8;transform:translateX(calc(-50% - 5px))}60%{opacity:.35}80%{opacity:.7}}
+#cg{position:absolute;inset:0;background:#000;opacity:0;transition:opacity 1.2s;pointer-events:none}#cg.on{opacity:1}
+#cg img{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated;image-rendering:crisp-edges}
+#screen.port #cg img{height:auto;aspect-ratio:16/9;top:calc(64px + env(safe-area-inset-top))}
+#win{position:absolute;overflow:hidden;opacity:0;transition:opacity .8s;pointer-events:none}
+#win.on{opacity:1}#win img{position:absolute;left:46%;top:8%;height:240%;transform:translateX(-50%)}
+#win::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(100deg,transparent 0 6px,rgba(180,210,255,.12) 6px 7px);z-index:2}
+#win::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:3.6%;background:#141d33;z-index:3;box-shadow:1px 0 0 #2a3a5c}
+.lbl{font-size:12px;color:var(--dim);letter-spacing:.1em;line-height:1}
+.val{font-size:16px;color:var(--ink);line-height:1.2}
+.cell{background:var(--fr0);border:1px solid;border-color:var(--fr0) var(--fr3) var(--fr3) var(--fr0);padding:4px 6px}
+.face{position:relative;flex:1;background:#060b18;border:2px solid;border-color:var(--fr0) var(--hi) var(--hi) var(--fr0);overflow:hidden;min-height:0}
+.face img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .3s}
+.face img.dim{opacity:.45}
+.face .nm{position:absolute;left:0;right:0;bottom:0;text-align:center;background:var(--fr2);border-top:1px solid var(--hi);font-size:14px;color:var(--hi2);line-height:20px}
+.face .ph{position:absolute;inset:14px 24px 26px;background:#cfd8e6;border:3px solid #101828;border-radius:2px;color:#101828;display:none;place-content:center;text-align:center;font-size:14px}
+.face.call .ph{display:grid}.face.call img{opacity:0}
+.dday{display:flex;justify-content:space-between;align-items:center}
+.dday b{font-weight:400;color:#ff8f8f}
+#line{margin:0;white-space:pre-wrap}
+#name{color:var(--blue)}#name:not(:empty)::before{content:"【"}#name:not(:empty)::after{content:"】"}
+#text.mono{color:#b9c6dc}
+#next{position:absolute;right:10px;bottom:6px;color:var(--blue);font-size:12px;animation:bob 1s steps(2) infinite;opacity:0}#next.on{opacity:1}
+@keyframes bob{50%{transform:translateY(2px)}}
+#choices{position:absolute;inset:0;display:none;place-content:center;background:rgba(3,6,13,.55);z-index:6;padding:12px}
+#choices.on{display:grid}
+#choices .cbox{background:var(--fr0);border:2px solid;border-color:var(--hi) var(--fr0) var(--fr0) var(--hi);box-shadow:0 0 0 2px var(--fr2),0 0 0 3px var(--fr0);padding:8px;display:flex;flex-direction:column;gap:4px;min-width:300px}
+#choices button{text-align:left;padding:6px 10px 6px 26px;min-height:32px;background:transparent;border:1px solid transparent;position:relative;color:var(--ink)}
+#choices button:hover,#choices button:focus-visible{background:var(--fr2);border-color:var(--hi);outline:none}
+#choices button:hover::before,#choices button:focus-visible::before{content:"▶";position:absolute;left:8px;color:var(--straw);animation:blink 1s steps(1) infinite}
+#timer{height:4px;background:var(--straw);width:100%;transform-origin:left;margin-bottom:4px}
+#phone{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:220px;background:#cfd8e6;color:#101828;border:2px solid #101828;box-shadow:0 0 0 2px #6b8bb8,4px 4px 0 #000;padding:6px 10px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:4}
+#phone.on{opacity:1}#phone b{display:block;font-weight:400;font-size:12px;color:#3c5a8a;border-bottom:1px dashed #3c5a8a;margin-bottom:4px}
+#phone.call{background:#14301f;color:#c8f0d0;text-align:center;border-color:#071a0e;box-shadow:0 0 0 2px #4fa16b,4px 4px 0 #000}#phone.call b{color:#7fd89a;border-color:#7fd89a}
+.over{position:absolute;inset:0;z-index:10;display:none}
+.over.on{display:block}
+#log,#end{background:var(--fr1);padding:10px}
+#log .inner,#end .inner{position:relative;height:100%;overflow-y:auto;background:var(--fr0);border:2px solid;border-color:var(--hi) var(--fr0) var(--fr0) var(--hi);padding:12px 16px}
+#log p{margin:0 0 8px}#log p span{color:var(--blue)}#log p span::before{content:"【"}#log p span::after{content:"】"}
+#log .x{position:absolute;right:16px;top:14px;z-index:2;height:22px;padding:0 10px;background:var(--fr2);border:1px solid;border-color:var(--hi) var(--fr0) var(--fr0) var(--hi);color:var(--hi2)}
+#end h2{font:400 24px/1.2 "PX";margin:0 0 4px;color:var(--hi2)}
+#end .sub{color:var(--dim);margin:0 0 10px}
+.meter{margin:10px 0}.meter div{display:flex;justify-content:space-between}
+.bar{height:8px;background:#1a2333;margin-top:4px;border:1px solid var(--fr3)}.bar i{display:block;height:100%}
+#end blockquote{margin:12px 0;padding:8px 12px;border-left:3px solid var(--straw);color:#cfd7e3;background:var(--fr1)}
+#end .row{display:flex;gap:8px;flex-wrap:wrap}
+#end .row button{height:26px;padding:0 12px;background:var(--fr2);border:1px solid;border-color:var(--hi) var(--fr0) var(--fr0) var(--hi);color:var(--hi2)}
+#screen.port{left:0;top:0;width:100%;height:100%;transform:none!important;box-shadow:none;background:none}
+#screen.port::before{display:none}
+#screen.port #scene{left:0;top:0;width:100%;height:100%;border:0;box-shadow:none}
+#screen.port #sprite{height:84%}
+#screen.port #side{left:10px;top:max(10px,env(safe-area-inset-top));width:auto;height:auto;flex-direction:row;padding:4px;gap:4px;background:rgba(3,6,13,.82)}
+#screen.port .face{display:none}
+#screen.port .info{flex-direction:row;gap:4px}
+#screen.port .cell{padding:3px 6px}#screen.port .lbl{font-size:11px}#screen.port .val{font-size:14px}
+#screen.port .dday{gap:6px}
+#screen.port #box{left:10px;right:10px;width:auto;top:auto;bottom:calc(60px + env(safe-area-inset-bottom));height:auto;min-height:156px;padding:16px 16px 22px;font-size:17px;line-height:1.65;background:repeating-conic-gradient(rgba(10,18,40,.9) 0 25%,rgba(6,11,26,.9) 0 50%) 0 0/4px 4px}
+#screen.port #bar{left:10px;right:10px;width:auto;top:auto;bottom:calc(10px + env(safe-area-inset-bottom));height:42px;justify-content:space-between}
+#screen.port #bar button{flex:1;height:42px;font-size:13px}
+#screen.port #choices .cbox{min-width:0;width:100%}
+#screen.port #choices button{min-height:46px;font-size:17px}
+.info{display:flex;flex-direction:column;gap:6px}
+#press{position:absolute;left:0;right:0;top:var(--menu-top,70%);text-align:center;font:clamp(11px,2.1vw,17px)/44px "Press Start 2P",monospace;color:#cfe2ff;letter-spacing:.08em;text-shadow:2px 2px 0 #071233;z-index:3;animation:blink 1.2s steps(1) infinite;cursor:pointer}
+#title.wait .tmenu{visibility:hidden}
+#title:not(.wait) #press{display:none}
+@keyframes blink{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#title{background:#02040a}
+#tcv{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+#title::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.28) 2px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.75) 100%)}
+.tmenu{position:absolute;left:50%;top:var(--menu-top,70%);transform:translateX(-50%);display:flex;flex-direction:column;align-items:flex-start;gap:clamp(10px,2.2vh,18px);z-index:2}
+.tmenu button{font:clamp(11px,2.1vw,17px)/1 "Press Start 2P",monospace;color:#9fbde6;background:none;border:0;min-height:44px;padding:0 0 0 1.6em;position:relative;letter-spacing:.06em;text-shadow:2px 2px 0 #071233}
+.tmenu button:hover,.tmenu button:focus-visible{color:#eaf4ff;outline:none}
+.tmenu button:hover::before,.tmenu button:focus-visible::before{content:"▶";position:absolute;left:0;color:#7cc4ff;animation:blink 1s steps(1) infinite}
+.tfoot{position:absolute;left:0;right:0;bottom:max(16px,4vh);text-align:center;font:clamp(8px,1.4vw,11px)/2 "Press Start 2P",monospace;color:#4f6f9f;letter-spacing:.08em;z-index:2;text-shadow:1px 1px 0 #030714}
+</style>
+</head>
+<body>
+<div id="stage">
+ <div id="screen">
+  <div class="pn" id="scene">
+    <div class="bg" id="bg"></div>
+    <canvas id="rain"></canvas>
+    <div id="win"><img src="img/h_excited.png" alt=""></div>
+    <img id="sprite" alt="">
+    <div id="cg"><img id="cgimg" alt=""></div>
+    <div id="phone"></div>
+    <div id="choices"></div>
+  </div>
+  <div class="pn" id="side">
+    <div class="face" id="pface"><img id="pimg" alt=""><div class="ph" id="pph"></div><div class="nm" id="pname"></div></div>
+    <div class="info">
+      <div class="cell"><div class="lbl">장소</div><div class="val" id="sLoc">-</div></div>
+      <div class="cell"><div class="lbl">시각</div><div class="val" id="sTime">-</div></div>
+      <div class="cell dday"><span class="lbl">LEET</span><b id="sDday">D-42</b></div>
+    </div>
+  </div>
+  <div class="pn" id="box" role="button" tabindex="0" aria-label="다음 대사"><p id="line"><span id="name"></span><span id="text"></span></p><span id="next">▼</span></div>
+  <div id="bar"><button id="bAuto">AUTO</button><button id="bLog">LOG</button><button id="bSnd">SOUND</button><button id="bTitle">TITLE</button></div>
+  <div class="over" id="log"><button class="x" id="bLogX">CLOSE</button><div class="inner" id="logIn"></div></div>
+  <div class="over" id="end"><div class="inner" id="endIn"></div></div>
+ </div>
+  <div class="over on wait" id="title">
+    <canvas id="tcv" aria-label="네가 보는 동안만" role="img"></canvas>
+    <div class="tmenu"><button id="bNew" aria-label="처음부터">NEW GAME</button><button id="bCont" aria-label="이어하기" hidden>CONTINUE</button></div>
+    <div id="press">TOUCH TO START</div>
+    <div class="tfoot">CHAPTER 1 DEMO<br>A FANTASY BL VISUAL NOVEL</div>
+  </div>
+</div>
+
+<script>
+{
+const H='H';
+const S=[
+{bg:'study',rain:0,sprite:'y_tired'},
+{t:'아홉 시 사십 분. 지금 나가면 열 시 통금에 딱 맞는다.'},
+{t:'늘 딱 맞춰서 산다. 그게 제일 안전하니까.'},
+{sfx:'buzz',phone:['엄마','오늘 몇 페이지 했어? 사진 찍어 보내.']},
+{sprite:'y_forced',t:'펼쳐만 둔 문제집을 찍는다. 각도를 잘 잡으면 공부한 것처럼 보인다.'},
+{t:'이런 건 이제 아주 잘한다.',phone:null},
+{bg:'alley',rain:1,sprite:null},
+{t:'버스를 놓쳤다. 이 골목으로 가로지르면 7분이 빠르다.'},
+{t:'……여긴 원래 작은 사당이 있던 자리였는데.'},
+{n:H,t:'……배고프다.'},
+{t:'아무도 없다. 없어야 한다.'},
+{choice:[{t:'못 들은 척 걷는다',set:{mask:1},go:'c1a'},{t:'소리 난 쪽을 돌아본다',set:{trust:1},go:'c1b'}]},
+{label:'c1a'},{t:'걸음을 빨리한다. 빗소리만 듣는다. 빗소리만.'},{go:'m1'},
+{label:'c1b'},{t:'돌아보고 말았다. 고개가 먼저 움직였다.'},
+{label:'m1',bg:'shrine'},
+{n:H,t:'아, 진짜 배고프다. 백 년은 굶은 것 같아.'},
+{sfx:'appear',sprite:'h_base',faint:1,t:'무너진 돌계단 위에 누가 쭈그려 앉아 있다. 흠뻑 젖은 머리. 누가 버린 패딩. 맨발.'},
+{n:H,t:'……어?'},
+{sprite:'h_excited',n:H,t:'너, 지금 나 봤지? 눈 마주쳤지?'},
+{n:'윤재',f:'fluster',t:'……아뇨.'},
+{n:H,t:'봤잖아! 와, 몇 년 만이야!'},
+{t:'벌떡 일어나 다가온다. 키가 너무 크다.'},
+{t:'보지 마. 대답하지 마.\n이건 예전에 그만둔 거다. 이제 다 나았다고, 선생님도 엄마도 그렇게 말했다.'},
+{n:H,t:'그거 뭐야? 봉지에 든 거.'},
+{t:'편의점 도시락이다. 저녁 먹을 시간이 없어서 사뒀다.'},
+{choice:[{t:'도시락을 내민다',set:{trust:1},go:'c2a'},{t:'무시하고 지나친다',set:{mask:1},go:'c2b'}]},
+{label:'c2a'},{n:H,t:'……나 주는 거야? 진짜로?'},{t:'두 손으로 받는다. 손끝이 차갑다.'},{n:H,t:'고마워. 이런 거 받아본 지 진짜 오래됐어.'},{go:'m2'},
+{label:'c2b'},{t:'봉지가 가벼워졌다.'},{n:H,t:'미안, 너무 배고파서. 나중에 갚을게.'},{n:H,t:'……신이 갚는 건 꽤 크다?'},
+{label:'m2'},
+{n:H,t:'너 이 동네 살아?'},
+{n:'윤재',f:'annoyed',t:'……당신 뭐예요.'},
+{n:H,t:'나? 여기 신. 이 동네 지키던.'},
+{sprite:'h_sad',n:H,t:'근데 집이 저렇게 됐어. 아무도 안 믿으니까 힘도 없고, 이름도 까먹었어.'},
+{t:'미친 사람이다. 아니면 내가 미친 거다.\n둘 중에 뭐가 나은지 모르겠다.'},
+{n:H,t:'있잖아. 네가 이름 하나 지어줄래?\n누가 불러줘야 내가 여기 있는 거거든.'},
+{n:'윤재',t:'……제가 왜요.'},
+{n:H,t:'나 보는 사람, 너밖에 없으니까.'},
+{t:'웃는 얼굴이 너무 멀쩡해서 짜증이 났다.\n어릴 때 키우고 싶었던 개 이름이 생각났다. 털 날린다고 끝내 안 된다던.'},
+{n:'윤재',f:'base',t:'……하랑.'},
+{sfx:'named',named:1,faint:0,sprite:'h_excited',n:H,t:'하랑. 하랑이다, 나.'},
+{t:'그의 윤곽이 처음으로 또렷해진다. 빗방울이 어깨에서 튀기 시작한다.'},
+{call:'엄마',t:'휴대폰이 울린다.'},
+{n:'엄마',t:'윤재야, 9시 58분이다. 어디니?'},
+{n:H,t:'누구야? 엄마? 안녕하세요!'},
+{n:'엄마',t:'……옆에 누구 있니?'},
+{choice:[{t:'"아무도 없어요. 혼자예요."',set:{mask:2},go:'c3a'},{t:'"……그냥, 길에서 누가 말 걸어서요."',set:{trust:1,susp:1},go:'c3b'}],timer:5,def:0},
+{label:'c3a',fx:'glitch'},{sprite:'h_serious',n:H,t:'……어, 방금 좀 차갑다.'},{t:'못 본 척했다. 그게 제일 안전하니까.'},{go:'m3'},
+{label:'c3b'},{n:'엄마',t:'모르는 사람이랑 말 섞지 말고 빨리 와.'},{sprite:'h_pout',n:H,t:'나 모르는 사람 아닌데. 하랑인데.'},
+{label:'m3',call:null,bg:'hall',rain:0,sprite:null},
+{sfx:'door',sprite:'y_tired',t:'열 시 정각. 딱 맞췄다.'},
+{t:'뒤를 돌아봤을 땐 아무도 없었다.\n……그래, 역시 없는 거였다.'},
+{bg:'room',rain:1,sprite:null},
+{sfx:'knock',t:'불을 켠다. 창밖에서 톡, 톡, 소리가 난다.'},
+{win:1,n:H,t:'윤재야! 나 갈 데 없어! 들여보내 줘!'},
+{n:'윤재',f:'fluster',t:'……여기 13층인데.'},
+{n:H,t:'신이잖아!'},
+{end:1,ch:'1장 · 도시락 하나 분의 신',max:[4,3],
+ good:'창문 너머 하랑의 윤곽이 또렷하다. 빗방울이 그의 어깨에서 튀고 있다.',
+ bad:'창문 너머 하랑의 윤곽이 조금 흐리다. 빗방울이 그를 그냥 통과한다.',
+ next:'2장 · 창문 너머의 동거인'},
+
+// ===== 2장 · 창문 너머의 동거인 =====
+{bg:'room',rain:1,win:1,sprite:null,time:'PM 10:02',n:H,t:'윤재야아. 춥다니까.'},
+{t:'창문에 얼굴을 붙인 남자가 입김으로 유리에 동그라미를 그린다.\n신이 입김이 나오나. 그런 걸 궁금해하는 내가 제일 이상하다.'},
+{choice:[{t:'창문을 열어준다',set:{trust:1},go:'c4a'},{t:'커튼을 친다',set:{mask:1},go:'c4b'}]},
+{label:'c4a',sfx:'door'},{t:'창문을 연다. 찬 바람과 빗물이 한꺼번에 들이친다.'},
+{win:0,sprite:'h_excited',faint:0,n:H,t:'역시! 너 착하다니까.'},{go:'m4'},
+{label:'c4b'},{t:'커튼을 친다. 창문 쪽은 이제 보지 않는다.\n보지 않으면, 없는 거다.'},
+{n:H,t:'……윤재야?'},
+{win:0,sprite:'h_sad',faint:1,t:'등 뒤에서 젖은 발소리가 난다. 돌아보니 그가 방 한가운데 서 있다. 아까보다 조금, 흐리다.'},
+{n:H,t:'신은 문 안 열어줘도 들어올 수는 있어. 근데 열어주면 좋잖아.'},
+{faint:0,t:'그 말이 이상하게 서운하게 들려서, 대꾸하지 못했다.'},
+{label:'m4'},
+{n:H,t:'와, 방 진짜 깨끗하다. 사람 사는 데 맞아?'},
+{t:'침대는 각이 잡혀 있고, 책은 높이 순서대로 꽂혀 있다. 엄마가 좋아하는 방이다.'},
+{n:H,t:'이불 엄청 폭신해 보인다. 나 여기서 자도 돼?'},
+{n:'윤재',f:'annoyed',t:'……조용히 해요. 다 들려요.'},
+{n:H,t:'누구한테? 나 너밖에 못 듣는데.'},
+{sfx:'knock',time:'PM 10:14',t:'똑똑.'},
+{n:'엄마',t:'윤재야. 누구랑 얘기하니?'},
+{t:'심장이 목까지 올라온다. 문고리가 아래로 기운다.'},
+{choice:[{t:'"전화 영어요. 내일 발표가 있어서요."',set:{mask:1},go:'c5a'},{t:'"……혼잣말이에요."',set:{trust:1,susp:1},go:'c5b'}],timer:5,def:0},
+{label:'c5a'},{n:'엄마',t:'그래? 늦게까지 수고한다. 열한 시엔 자고.'},
+{t:'거짓말이 너무 매끄럽게 나왔다. 이런 건 정말 잘한다.'},{go:'m5'},
+{label:'c5b'},{n:'엄마',t:'……혼잣말? 요즘 또 그러니?'},
+{n:'엄마',t:'내일 아침에 얘기 좀 하자.'},
+{t:'발소리가 멀어진다. "또"라는 말이 방 안에 오래 남았다.'},
+{label:'m5'},
+{sprite:'h_serious',n:H,t:'너 손 떨어.'},
+{t:'내려다보니 정말 그렇다. 주먹을 쥐어 숨긴다.'},
+{n:H,t:'엄마한테 늘 그렇게 말해? 아무 일도 없는 것처럼?'},
+{n:'윤재',f:'tired',t:'……그게 제일 편해요.'},
+{n:H,t:'누가?'},
+{t:'대답하지 않았다.'},
+{time:'AM 01:12',t:'불을 끈다. 하랑은 바닥에 쪼그려 앉아 창밖을 본다. 비는 그쳤다.'},
+{choice:[{t:'여분 이불을 꺼내 던져준다',set:{trust:1},go:'c6a'},{t:'그냥 눕는다',set:{mask:1},go:'c6b'}]},
+{label:'c6a',sprite:'h_excited'},{n:H,t:'……이거 나 주는 거야?'},{n:H,t:'오늘 처음 받는 게 두 개나 되네. 도시락이랑 이불.'},{go:'m6'},
+{label:'c6b'},{t:'등을 돌리고 눕는다. 바닥이 차가울 텐데, 하고 생각하다가 그만둔다.'},{n:H,t:'괜찮아. 신은 바닥에서 자도 허리 안 아파.'},
+{label:'m6'},
+{sprite:'h_base',n:H,t:'윤재야. 하나만 물어봐도 돼?'},
+{n:H,t:'왜 나 보이는 거, 숨겨?'},
+{t:'어둠 속이라 다행이었다. 얼굴을 안 봐도 되니까.'},
+{t:'일곱 살 때 할머니 장례식에서, 할머니가 문가에 서 있다고 말했다.\n그날부터 병원에 다녔다. 엄마는 그 일을 "그때 좀 아팠던 거"라고 부른다.'},
+{n:'윤재',f:'base',t:'……보인다고 하면, 다들 곤란해하니까요.'},
+{sprite:'h_sad',n:H,t:'그럼 나만 알면 되겠다.'},
+{n:H,t:'네가 보는 거, 나만 알고 있을게. 그럼 곤란한 사람 없잖아.'},
+{t:'바보 같은 말이었다. 그런데 그날 밤은, 약 없이 잠들었다.'},
+
+{bg:'study',rain:0,sprite:'h_excited',faint:0,time:'PM 08:20',dday:41,t:'다음 날 저녁. 독서실.'},
+{t:'하랑은 칸막이 위에 걸터앉아 내 문제집을 내려다보고 있다.\n아무도 그를 보지 못한다. 그래서 그는 아무렇지 않게 떠든다.'},
+{n:H,t:'이건 뭐야? 언어이해? 글 읽고 고르는 거?'},
+{n:H,t:'3번. 아니다, 4번. 아니, 너 표정 보니까 3번이구나.'},
+{t:'포스트잇에 적어 칸막이에 붙인다. 『조용히』'},
+{n:H,t:'……그거 나한테 쓴 거야? 와, 나 편지 처음 받아 봐.'},
+{t:'포스트잇을 떼어 소중하게 패딩 주머니에 넣는다. 뭘 해도 안 된다.'},
+{sfx:'buzz',phone:['엄마','토요일 2시에 상담 선생님 예약했다. 어젯밤 일은 그때 얘기하자.']},
+{t:'엄마의 문자. "어젯밤 일".'},
+{choice:[{t:'"네." 라고 답장한다',set:{mask:1},go:'c7a'},{t:'휴대폰을 엎어두고 하랑을 본다',set:{trust:1},go:'c7b'}]},
+{label:'c7a',phone:null},{t:'네. 두 글자를 보내는 데 삼 분이 걸렸다.'},{sprite:'h_serious',n:H,t:'……표정이 또 아무 일 없는 얼굴이다.'},{go:'m7'},
+{label:'c7b',phone:null},{t:'휴대폰을 엎는다. 진동이 한 번 더 울렸지만 보지 않았다.'},{n:H,t:'뭐야, 무슨 일 있어?'},{n:'윤재',f:'base',t:'……3번 맞아요.'},{n:H,t:'봐! 내가 맞혔지!'},
+{label:'m7'},
+
+{bg:'alley',rain:0,sprite:'h_base',time:'PM 09:46',t:'밤. 같은 골목.'},
+{t:'펜스에 새 현수막이 붙어 있다. 『철거 작업 예정 안내』. 날짜는 다음 주 월요일.'},
+{sprite:'h_sad',n:H,t:'아, 저기까지 다 미는구나.'},
+{n:H,t:'사당 자리까지 밀리면, 나 좀 더 흐려질 거야. 거기가 원래 내 자리라서.'},
+{n:'윤재',f:'fluster',t:'……사라져요?'},
+{n:H,t:'모르겠어. 기억해주는 사람이 있으면 괜찮을 것 같기도 하고.'},
+{choice:[{t:'"……그럼 제가 기억할게요."',set:{trust:2},go:'c8a'},{t:'"그건 제가 알 바 아니에요."',set:{mask:1},go:'c8b'}]},
+{label:'c8a',sprite:'h_excited',sfx:'named'},{n:H,t:'…….'},{n:H,t:'윤재야. 방금 그 말, 진짜 크다. 신이 받는 것 중에 제일 커.'},
+{t:'괜히 말했다. 그런데 취소하고 싶지는 않았다.'},{go:'m8'},
+{label:'c8b',fx:'glitch'},{n:H,t:'……그치. 네 알 바는 아니지.'},
+{t:'그가 웃는다. 웃는 얼굴 그대로, 가로등 불빛이 그를 조금 통과했다.'},
+{label:'m8'},
+{bg:'room',sprite:null,time:'PM 10:00',t:'열 시 정각. 집에 도착했다.\n내 방 바닥에는 이불 한 채가 개켜져 있다. 어제까지는 없던 것이다.'},
+{end:2,ch:'2장 · 창문 너머의 동거인',max:[9,9],
+ good:'하랑은 오늘도 바닥에서 잔다. 이불 끝을 꼭 쥐고, 아주 또렷하게.',
+ bad:'하랑은 오늘도 바닥에서 잔다. 어둠 속에서 그의 윤곽을 찾는 데 조금 오래 걸렸다.',
+ next:'3장 · 균열'},
+// ===== 3장 · 균열 =====
+{bg:'room',rain:0,sprite:'h_base',time:'AM 06:40',dday:40,t:'목요일 아침. 알람보다 먼저 눈이 떠졌다.'},
+{t:'하랑은 바닥에서 이불 끝을 꼭 쥐고 자고 있다. 신도 잠을 자나 보다.\n자는 얼굴은 생각보다 어려 보였다.'},
+{n:'엄마',t:'윤재야, 일어났니? 오늘 모의고사 성적 나오는 날이지.'},
+{n:'윤재',f:'forced',t:'네. 일어났어요.'},
+{t:'목소리를 고르는 데는 일 초면 된다. 십오 년을 연습했으니까.'},
+{n:H,t:'……방금 그 목소리, 누구야?'},
+{t:'언제 깼는지, 하랑이 반쯤 감은 눈으로 나를 보고 있다.'},
+{n:H,t:'나한테 말할 때랑 완전 다르던데.'},
+{choice:[{t:'"원래 이래요."',set:{mask:1},go:'c9a'},{t:'"……엄마 앞에선 이렇게 해야 돼요."',set:{trust:1},go:'c9b'}]},
+{label:'c9a'},{n:H,t:'원래 그런 사람이 어딨어. 원래는 다 없어.'},{go:'m9'},
+{label:'c9b',sprite:'h_sad'},{n:H,t:'……그렇구나. 그럼 나 앞에선 안 해도 돼.'},
+{label:'m9'},
+
+{bg:'study',sprite:'h_base',faint:0,time:'PM 07:10',t:'독서실. 오늘따라 문제가 눈에 안 들어온다.'},
+{sfx:'buzz',phone:['엄마','모의고사 점수 봤다. 지난번보다 11점 떨어졌네. 토요일에 같이 얘기하자.']},
+{t:'11점. 숫자는 정확하다. 엄마는 숫자를 좋아한다.',phone:null},
+{t:'샤프를 쥔 손에 힘이 들어간다. 심이 부러진다. 또 부러진다.'},
+{sprite:'h_serious',n:H,t:'윤재야. 그만 눌러. 손 다쳐.'},
+{t:'하랑이 칸막이에서 내려와 내 손등 위에 손을 얹는다.\n차갑지도 따뜻하지도 않다. 그냥, 무언가 거기 있다는 무게.'},
+{n:H,t:'바람 쐬러 가자. 나 보여주고 싶은 데 있어.'},
+
+{bg:'shrine',sprite:'h_base',time:'PM 09:30',t:'옛 사당 터. 출입 통제선 너머로 무너진 지붕이 보인다.'},
+{n:H,t:'여기가 내 집이었어. 지금은 좀 엉망이지만.'},
+{t:'하랑이 통제선을 아무렇지 않게 넘어간다. 나는 잠깐 망설이다가 따라 넘는다.\n태어나서 처음 넘어본 선이다.'},
+{n:H,t:'저 계단 위에 할머니 한 분이 매일 오셨어. 아침마다 물 한 그릇이랑 밥 한 숟갈.'},
+{n:H,t:'삼 년 전부터 안 오셨어. 그때부터 내 이름이 조금씩 안 떠올랐던 것 같아.'},
+{n:'윤재',f:'base',t:'……돌아가셨어요?'},
+{sprite:'h_sad',n:H,t:'아마도. 신은 그런 건 몰라. 그냥 안 오는 것만 알아.'},
+{t:'돌계단에 나란히 앉는다. 젖은 돌이 바지에 스민다. 엄마가 싫어할 일이다.'},
+{n:H,t:'너는? 너는 뭐가 제일 무서워?'},
+{t:'대답하려고 입을 열었는데, 말 대신 다른 게 먼저 나왔다.'},
+{sprite:'y_cry',t:'눈물이었다.'},
+{n:'윤재',t:'……토요일에, 상담 가면요.'},
+{n:'윤재',t:'선생님이 물어볼 거예요. 요즘 뭐가 보이냐고. 그럼 저는 아무것도 안 보인다고 해야 돼요.'},
+{n:'윤재',t:'그 말 하면, 형은 어떻게 돼요?'},
+{t:'형이라고 불렀다. 왜 그렇게 불렀는지 모르겠다.'},
+{choice:[{t:'우는 채로 하랑을 본다',set:{trust:1},go:'c10a'},{t:'소매로 얼굴을 닦고 "괜찮아요"라고 한다',set:{mask:1},go:'c10b'}]},
+{label:'c10a',sprite:'y_unmask'},{t:'닦지 않았다. 흐르는 대로 두고, 그를 봤다.\n가면이 없는 얼굴로 누군가를 보는 게 이렇게 무서운 일인 줄 몰랐다.'},{go:'m10'},
+{label:'c10b',sprite:'y_tired'},{t:'소매로 꾹 눌러 닦는다. 괜찮아요. 입이 먼저 그렇게 말한다.'},{t:'괜찮다는 말은 이번에도 매끄러웠다. 그런데 처음으로, 그 말이 내 귀에도 거짓말처럼 들렸다.'},
+{label:'m10'},
+{sprite:'g_cold',fx:'glitch',n:H,t:'그럼 내가 네 엄마한테 보이면 돼?'},
+{t:'순간, 그의 눈이 파랗게 빛났다. 사당 쪽에서 바람이 거꾸로 불었다.\n처음 보는 얼굴이었다. 처음 듣는 목소리였다.'},
+{sprite:'h_sad',n:H,t:'……농담이야. 지금 나는 그럴 힘도 없어.'},
+{n:H,t:'그러니까 울지 마. 아니다, 울어도 돼. 나한테만.'},
+
+{bg:'room',sprite:'h_base',time:'PM 11:20',t:'밤. 불을 끄고 누웠는데 잠이 안 온다.'},
+{t:'바닥에서 하랑이 뒤척인다. 그도 잠이 안 오는 모양이다.'},
+{n:H,t:'윤재야. 자?'},
+{t:'대답 대신 침대 밖으로 손을 내린다. 왜 그랬는지는 모르겠다.'},
+{choice:[{t:'내민 손을 그대로 둔다',set:{trust:1},go:'c11a'},{t:'손을 다시 거둔다',set:{mask:1},go:'c11b'}]},
+{label:'c11a',sprite:'h_excited'},{t:'잠깐의 정적. 그리고 무언가가 손끝을 아주 조심스럽게 잡는다.'},{n:H,t:'……이거 기억해도 돼?'},{n:'윤재',f:'base',t:'……마음대로 하세요.'},{go:'m11'},
+{label:'c11b'},{t:'손을 거둔다. 손끝에 뭔가 닿을 뻔한 것 같았지만, 착각이었을 것이다.'},{n:H,t:'……잘 자, 윤재야.'},
+{label:'m11'},
+{t:'토요일까지 이틀 남았다.'},
+{end:3,ch:'3장 · 균열',max:[12,12],
+ good:'잡힌 손끝이 아침까지 따뜻했다. 하랑은 꿈속에서도 또렷하게 웃고 있었다.',
+ bad:'아침에 눈을 떴을 때, 바닥의 이불이 비어 있는 것처럼 보였다. 다시 보니 그는 거기 있었다. 아마도.',
+ next:'4장 · 들킴'},
+// ===== 4장 · 들킴 =====
+{bg:'room',rain:0,sprite:'h_base',faint:0,time:'AM 10:30',dday:38,t:'토요일 아침.'},
+{t:'하랑이 이불을 개고 있다. 모서리가 안 맞는다. 세 번째 다시 펴는 중이다.'},
+{n:H,t:'이거 어떻게 하는 거야? 네 침대처럼 각 잡고 싶은데.'},
+{sfx:'door',t:'노크 없이 문이 열렸다. 엄마는 노크를 하지 않는다.'},
+{n:'엄마',t:'윤재야, 한 시 반에 나가자. ……바닥에 웬 이불이니?'},
+{t:'하랑이 이불을 든 채로 굳는다. 엄마의 시선은 그를 그대로 통과해서, 이불에 닿는다.'},
+{cond:['susp',1],go:'c12s'},
+{n:'엄마',t:'밤에 추웠니? 말을 하지 그랬어.'},{go:'m12'},
+{label:'c12s'},
+{n:'엄마',t:'……그날 밤에도 혼잣말 하더니. 요즘 누구랑 얘기하니, 윤재야.'},
+{t:'엄마의 목소리가 아주 조용해진다. 어릴 때, 병원에 가기 전날 밤에 듣던 목소리다.'},
+{label:'m12'},
+{n:'엄마',t:'상담 선생님이 그러시더라. 네 입으로 말하는 게 제일 중요하대.'},
+{n:'엄마',t:'그러니까 지금 말해 봐. 아무것도 안 보인다고.'},
+{sprite:'h_serious',t:'엄마 등 뒤에 하랑이 서 있다. 이불을 끌어안은 채로, 나를 본다.\n아무 말도 하지 않는다. 말해도 엄마한텐 안 들리니까. 그런데 그게 꼭, 나한테 맡긴다는 얼굴 같았다.'},
+{choice:[{t:'"……아무것도, 안 보여요."',set:{mask:2},go:'c13a'},{t:'"……보여요. 지금도."',set:{trust:2,susp:1},go:'c13b'}],timer:7,def:0},
+{label:'c13a',fx:'glitch',faint:1},
+{n:'엄마',t:'그래. 그럼 됐어. 선생님 앞에서도 그렇게만 말해.'},
+{t:'엄마가 웃는다. 오랜만에 보는, 진짜로 안심한 얼굴이다.\n그 뒤에서 하랑의 윤곽이 물에 번진 글씨처럼 흐려졌다.'},
+{sprite:'h_sad',n:H,t:'……응. 잘했어, 윤재야.'},
+{t:'잘했다는 말이 이렇게 아픈 말인 줄 몰랐다.'},{go:'m13'},
+{label:'c13b'},
+{t:'말해버렸다. 십오 년 동안 삼킨 말이, 너무 쉽게 나왔다.'},
+{n:'엄마',t:'…….'},
+{n:'엄마',t:'또 시작이구나.'},
+{t:'엄마는 화내지 않았다. 차라리 화를 냈으면 좋았을 것이다.\n엄마는 그냥 지친 얼굴로, 문을 닫고 나갔다.'},
+{sprite:'h_sad',n:H,t:'……윤재야. 괜찮아?'},
+{n:'윤재',f:'tired',t:'아뇨. 근데, 거짓말은 안 했어요.'},
+{label:'m13'},
+
+{bg:'hall',sprite:null,faint:0,time:'PM 05:10',t:'오후 다섯 시. 상담을 마치고 돌아오는 길.'},
+{cond:['susp',2],go:'c14s'},
+{t:'상담 선생님은 친절했다. 요즘 어떤지, 잠은 잘 자는지 물었다.\n나는 모범 답안처럼 대답했다. 엄마는 돌아오는 내내 기분이 좋았다.'},{go:'m14'},
+{label:'c14s'},
+{t:'상담 선생님은 친절했다. 엄마가 먼저 많은 걸 말했다. 혼잣말, 이불, 밤마다 들리는 목소리.\n선생님은 다음 주에 한 번 더 오자고 했다. 엄마는 돌아오는 내내 아무 말도 하지 않았다.'},
+{label:'m14'},
+{t:'복도 끝 센서등 아래, 하랑이 쪼그려 앉아 기다리고 있었다.\n상담실엔 따라 들어오지 않았다. 들어가면 안 될 것 같았대.'},
+
+{bg:'shrine',sprite:'h_base',time:'PM 11:40',dday:37,t:'일요일 밤. 철거 하루 전.'},
+{t:'사당 앞에 굴착기 두 대가 서 있다. 노란 팔이 달빛 아래 접혀 있다. 내일 아침이면 저 팔이 펴진다.'},
+{condgt:['mask','trust'],go:'c15f'},
+{n:H,t:'여기 오면 아직 좀 힘이 나. 마지막으로 와보고 싶었어.'},{go:'m15'},
+{label:'c15f',faint:1},
+{t:'하랑의 손끝이 가로등 불빛을 그대로 통과한다. 그는 자기 손을 신기하다는 듯 내려다본다.'},
+{n:H,t:'요즘 좀 그래. 괜찮아, 아직은.'},
+{label:'m15'},
+{sprite:'h_serious',n:H,t:'윤재야. 내일 저게 다 밀리면, 나 어떻게 될지 몰라.'},
+{n:H,t:'그래서 하나만 부탁할게.'},
+{n:H,t:'내일 아침, 여기 와서 내 이름 한 번만 불러줘. 네가 지어준 거.'},
+{t:'내일 아침 아홉 시. 엄마는 다음 주 상담 전까지 외출 금지라고 했다.\n아홉 시면, 엄마가 아직 집에 있을 시간이다.'},
+{choice:[{t:'"……갈게요. 꼭."',set:{trust:1},go:'c16a'},{t:'"……약속은 못 해요."',set:{mask:1},go:'c16b'}]},
+{label:'c16a',sprite:'h_excited'},{n:H,t:'약속했다. 신한테 한 약속은 무르는 거 아니다?'},{go:'m16'},
+{label:'c16b',sprite:'h_sad'},{n:H,t:'……그래. 그래도 기다릴게. 기다리는 건 잘해. 삼 년 했어.'},
+{label:'m16'},
+{t:'집으로 돌아오는 길, 돌아보니 하랑은 무너진 지붕 아래 앉아 있었다.\n작은 사당이 그를 마지막으로 품고 있는 것처럼 보였다.'},
+{end:4,ch:'4장 · 들킴',max:[15,15],
+ good:'뒤돌아본 사당 앞에서, 하랑은 또렷하게 손을 흔들고 있었다.',
+ bad:'뒤돌아봤을 때, 사당 앞에는 아무도 없는 것처럼 보였다. 눈을 비비고 다시 봤다. 아주 희미하게, 그가 있었다.',
+ next:'5장 · 선택'},
+// ===== 5장 · 선택 =====
+{bg:'room',rain:1,sprite:null,faint:0,time:'AM 08:40',dday:36,t:'월요일 아침. 비가 온다.'},
+{t:'바닥의 이불이 비어 있다. 하랑은 어젯밤 사당에 남았다.\n방이 원래대로 조용하다. 원래대로라는 게, 이렇게 조용한 거였나.'},
+{n:'엄마',t:'윤재야. 아침 먹어라. 오늘은 집에서 공부하고.'},
+{t:'시계를 본다. 여덟 시 사십 분. 사당까지 뛰면 십오 분.\n현관 앞엔 엄마가 있다. 엄마는 오늘 출근하지 않았다.'},
+{t:'아홉 시에 굴착기가 움직인다. 아홉 시에, 누가 이름을 불러야 한다.'},
+{choice:[{t:'우산도 없이 현관문을 연다',set:{trust:2},go:'go'},{t:'책상 앞에 앉는다',set:{mask:2},go:'stay'}],timer:9,def:1},
+
+// ----- 나간다 -----
+{label:'go'},
+{bg:'hall',sprite:null,time:'AM 08:43',n:'엄마',t:'윤재야? 어디 가니! 윤재야!'},
+{t:'처음으로 엄마 말을 등 뒤에 두고 뛰었다.\n비가 얼굴을 때린다. 숨이 차다. 이상하게 웃음이 났다.'},
+{bg:'shrine',time:'AM 08:58',t:'사당 앞. 굴착기의 노란 팔이 천천히 펴지고 있다.'},
+{cond:['mask',8],go:'normal'},
+
+// 해피 〈두 사람 몫의 사당〉
+{faint:1,sprite:'h_sad',t:'무너진 지붕 아래, 하랑이 있다. 거의 빗물처럼 투명하다.'},
+{t:'인부들이 소리친다. 뒤에서 엄마가 쫓아오는 발소리가 들린다.\n상관없었다. 숨을 끝까지 들이마셨다.'},
+{n:'윤재',f:'fluster',t:'하랑!!'},
+{sfx:'named',faint:0,sprite:'g_base',t:'빗속에서 윤곽이 돌아온다. 어깨에서, 다시 빗방울이 튄다.'},
+{n:H,t:'……왔다. 진짜 왔다.'},
+{n:'엄마',t:'윤재야…… 누구랑 얘기하는 거니.'},
+{t:'돌아본다. 젖은 엄마가 우산도 없이 서 있다. 엄마가 처음 보는 얼굴로 나를 보고 있다.'},
+{n:'윤재',f:'base',t:'여기 사람 있어요, 엄마. 제가 보는 사람이요.'},
+{n:'윤재',t:'이 사람이 저 살렸어요. 그러니까 저도, 이 사람 안 없어지게 할 거예요.'},
+{cg:'happy',t:'구름 사이로 햇빛이 들었다. 잡은 손이 따뜻했다.'},
+{t:'엄마는 대답하지 않았다. 대신 오래, 아주 오래 빈 곳을, 내가 보는 곳을 봤다.'},
+{bg:'oneroom',rain:0,sprite:'g_base',time:'PM 07:00',dday:0,t:'반년 뒤. 학교 앞 작은 원룸.'},
+{t:'창가에 작은 선반을 달았다. 매일 아침 물 한 그릇, 밥 한 숟갈.\n시험은 한 번 떨어졌다. 엄마는 가끔 반찬을 보내온다. 이불 두 채를 같이.'},
+{n:H,t:'윤재야, 오늘 밥 한 숟갈 말고 두 숟갈 주면 안 돼?'},
+{n:'윤재',f:'forced',t:'……신이 욕심이 많네요.'},
+{t:'억지로 웃으려던 건데, 그냥 웃음이 나왔다.'},
+{end:5,final:1,ending:'두 사람 몫의 사당',kind:'해피 엔딩',ch:'두 사람 몫의 사당',max:[17,17],
+ good:'세상에서 제일 작은 사당에는, 신 하나와 사람 하나가 산다.',bad:'세상에서 제일 작은 사당에는, 신 하나와 사람 하나가 산다.',next:'— 끝 —'},
+
+// 노멀 〈비밀 동거〉
+{label:'normal',faint:1,sprite:'h_sad',t:'무너진 지붕 아래, 하랑이 있다. 거의 빗물처럼 투명하다.'},
+{t:'인부들이 소리친다. 목소리가 목에 걸린다. 사람들이 본다.\n결국, 아주 작게 불렀다.'},
+{n:'윤재',f:'tired',t:'……하랑.'},
+{sfx:'appear',faint:0,sprite:'h_base',t:'빗속에서 윤곽이 천천히 돌아온다. 다 돌아오지는 않았다. 그래도, 돌아왔다.'},
+{n:H,t:'작게 불러도 들려. 너 목소리는.'},
+{bg:'room',rain:1,sprite:'h_base',time:'PM 10:00',dday:35,t:'그날 밤. 열 시 정각.'},
+{t:'엄마한테는 편의점에 다녀왔다고 했다. 엄마는 믿었다. 아니, 믿기로 한 것 같았다.\n바닥에는 오늘도 이불 한 채가 개켜져 있다.'},
+{cg:'normal',n:H,t:'윤재야. 우리 이렇게 계속 몰래 살아?'},
+{n:'윤재',f:'base',t:'……당분간은요. 들키지 마세요.'},
+{n:H,t:'나 원래 안 보여. 들킬 일이 없어.'},
+{t:'그 말이 농담인지 슬픈 말인지, 아직은 모르겠다.'},
+{end:5,final:1,ending:'비밀 동거',kind:'노멀 엔딩',ch:'비밀 동거',max:[17,17],
+ good:'완벽한 아들의 방에는, 아무도 모르는 이불 한 채가 있다.',bad:'완벽한 아들의 방에는, 아무도 모르는 이불 한 채가 있다.',next:'— 끝 —'},
+
+// ----- 남는다 -----
+{label:'stay'},
+{sprite:'y_tired',time:'AM 08:55',t:'책상 앞에 앉는다. 문제집을 편다. 1번 문제를 읽는다. 다시 읽는다.'},
+{t:'아홉 시. 멀리서 무언가 무너지는 소리가 들렸다. 빗소리에 섞여서, 아주 작게.'},
+{cond:['trust',8],go:'god'},
+
+// 배드 〈완벽한 아들〉
+{fx:'glitch',sprite:'y_forced',time:'AM 09:01',t:'아무 일도 일어나지 않았다. 원래대로였다.'},
+{bg:'study',rain:0,sprite:'y_forced',time:'PM 09:40',dday:0,t:'이 년 뒤. 합격 발표날.'},
+{t:'엄마가 울었다. 아빠가 처음으로 어깨를 두드렸다. 나는 웃었다. 웃는 건 잘한다.'},
+{t:'저녁에 편의점에 들렀다. 도시락을 두 개 샀다.\n계산하고 나서야 알았다. 또 두 개를 샀다는 걸.'},
+{cg:'son',t:'남은 하나는 언제나처럼, 아무도 없는 골목 끝 빈 터에 놓고 온다.\n누가 먹는지는 모른다. 아무것도 안 보이니까.'},
+{end:5,final:1,ending:'완벽한 아들',kind:'배드 엔딩',ch:'완벽한 아들',max:[17,17],
+ good:'그는 이제 아무것도 보지 않는다. 그래서 아무도, 그를 보지 않는다.',bad:'그는 이제 아무것도 보지 않는다. 그래서 아무도, 그를 보지 않는다.',next:'— 끝 —'},
+
+// 배드 〈신의 몫〉
+{label:'god',sfx:'knock',time:'AM 09:03',t:'똑, 똑.\n창문을 두드리는 소리. 13층 창문.'},
+{win:0,sprite:'g_cold',fx:'glitch',t:'창밖이 아니었다. 그는 이미 방 안에 서 있었다.\n젖지 않은 검은 옷. 은빛 관. 파랗게 빛나는 눈.'},
+{n:H,t:'약속했잖아, 윤재야.'},
+{n:'윤재',f:'fluster',t:'……사당, 무너졌어요?'},
+{sprite:'g_possessive',n:H,t:'응. 그런데 이상하지. 하나도 안 흐려졌어.'},
+{n:H,t:'네가 오지 않으면서도, 나를 계속 생각했잖아. 무섭게. 미안하게. 아주 많이.'},
+{n:H,t:'그거 다 내 거야. 덕분에 이렇게 됐어.'},
+{t:'그가 손을 내민다. 그 손은 이제 차갑지도, 따뜻하지도 않다.\n그저 거절할 수 없는 무게가 있다.'},
+{n:H,t:'네가 안 오면, 내가 가면 되지. 이제 우리 집으로 가자.'},
+{cg:'god',n:H,t:'거기선 아무도 너한테 아무것도 안 보인다고 말하라고 안 해.'},
+{bg:'room',sprite:null,time:'PM 06:00',dday:35,t:'그날 저녁, 엄마는 경찰에 실종 신고를 했다.\n방은 깨끗했다. 침대는 각이 잡혀 있었다. 창문은 안에서 잠겨 있었다.'},
+{t:'바닥에 이불 한 채가 개켜져 있었다. 엄마는 그 이불이 어디서 났는지 끝내 알지 못했다.'},
+{end:5,final:1,ending:'신의 몫',kind:'배드 엔딩',ch:'신의 몫',max:[17,17],
+ good:'세상 어디에도 없는 사당에서, 그는 이제 영원히 보인다. 단 한 사람에게만.',bad:'세상 어디에도 없는 사당에서, 그는 이제 영원히 보인다. 단 한 사람에게만.',next:'— 끝 —'}
+
+
+
+
+];
+
+const $=id=>document.getElementById(id);
+const st={i:0,mask:0,trust:0,susp:0,named:0,bg:'',rain:0,sprite:null,faint:0,phone:null,call:null,win:0,log:[]};
+const labels={};S.forEach((n,i)=>{if(n.label)labels[n.label]=i});
+let typing=null,full='',busy=false;
+
+const save=()=>{try{localStorage.setItem('hr-save',JSON.stringify(st))}catch(e){}};
+const load=()=>{try{return JSON.parse(localStorage.getItem('hr-save')||'null')}catch(e){return null}};
+
+const LOC={study:['독서실','PM 09:40'],alley:['재개발 골목','PM 09:51'],shrine:['옛 사당 터','PM 09:54'],hall:['아파트 13층','PM 10:00'],room:['윤재의 방','PM 10:01'],oneroom:['작은 원룸','PM 07:00']};
+let yFace='base',autoOn=false,autoT=null;
+function portrait(kind,who){const f=$('pface'),im=$('pimg'),nm=$('pname');f.classList.toggle('call',kind==='m');
+  if(kind==='m'){$('pph').textContent='엄마';nm.textContent='엄마';return}
+  if(kind==='h'){const hs=st.win?'h_excited':(st.sprite&&st.sprite[0]!=='y'?st.sprite:'h_base');im.src='img/f_'+hs+'.png';im.classList.toggle('dim',!!st.faint);nm.textContent=who;return}
+  im.src='img/f_y_'+yFace+'.png';im.classList.toggle('dim',!who);nm.textContent='윤재'}
+function fit(){const port=innerWidth/innerHeight<.9,sc=$('screen');sc.classList.toggle('port',port);const W=port?360:640,Hh=port?640:400;
+  const k=Math.min(innerWidth/W,innerHeight/Hh)*.98;sc.style.transform=port?'':`translate(-50%,-50%) scale(${k})`;if(st.win)placeWin();try{rs()}catch(e){}}
+function scheduleAuto(){clearTimeout(autoT);if(autoOn&&!busy&&!typing)autoT=setTimeout(()=>{if(autoOn&&!busy&&!typing&&!$('title').classList.contains('on'))advance()},1400+full.length*45)}
+function placeWin(){const sc=$('scene'),vw=sc.clientWidth,vh=sc.clientHeight,k=Math.max(vw/320,vh/180),ox=(vw-320*k)/2,oy=(vh-180*k)/2,w=$('win').style;
+  w.left=ox+98.8*k+'px';w.top=oy+13.6*k+'px';w.width=117.4*k+'px';w.height=69.4*k+'px'}
+addEventListener('resize',()=>{if(st.win)placeWin()});
+function render(){
+  if($('bg').dataset.k!==st.bg){$('bg').dataset.k=st.bg;$('bg').style.backgroundImage=st.bg?`url(bg/${st.bg}.png)`:'none'}
+  $('rain').style.opacity=st.rain?1:0;
+  const sp=$('sprite');
+  if(st.sprite){if(!sp.src.endsWith(st.sprite+'.png'))sp.src='img/'+st.sprite+'.png';sp.classList.add('on')}else sp.classList.remove('on');
+  sp.classList.toggle('faint',!!st.faint);
+  if(st.win)placeWin();
+  scene();
+  const L=LOC[st.bg]||['-','-'];$('sLoc').textContent=L[0];$('sTime').textContent=st.call?'PM 09:58':(st.time||L[1]);$('sDday').textContent=st.dday==null?'D-42':(st.dday>0?'D-'+st.dday:'—');
+  const cg=$('cg');if(st.cg){const u='cg/'+st.cg+'.png';if(!$('cgimg').src.endsWith(u))$('cgimg').src=u;cg.classList.add('on')}else cg.classList.remove('on');
+  $('win').classList.toggle('on',!!st.win);if(st.win)sp.classList.remove('on');
+  const ph=$('phone');
+  if(st.call){ph.className='on call';ph.innerHTML='<b>수신 중</b>'+st.call}
+  else if(st.phone){ph.className='on';ph.innerHTML='<b>'+st.phone[0]+'</b>'+st.phone[1]}
+  else ph.className='';
+}
+
+function apply(n){
+  if('bg' in n&&n.bg!==st.bg){st.time=null;st.cg=null}
+  ['bg','rain','sprite','faint','phone','call','win','named','time','dday','cg'].forEach(k=>{if(k in n)st[k]=n[k]});
+  if(n.sfx)sfx(n.sfx);
+  if(n.fx==='glitch'){sfx('glitch');const sp=$('sprite');sp.classList.remove('glitch');void sp.offsetWidth;sp.classList.add('glitch')}
+}
+
+function step(){
+  while(st.i<S.length){
+    const n=S[st.i];apply(n);render();
+    if(n.cond){if((st[n.cond[0]]||0)>=n.cond[1]){st.i=labels[n.go]}else st.i++;continue}
+    if(n.condgt){if((st[n.condgt[0]]||0)>(st[n.condgt[1]]||0)){st.i=labels[n.go]}else st.i++;continue}
+    if(n.go){st.i=labels[n.go];continue}
+    if(n.choice){showChoice(n);return}
+    if(n.end){showEnd(n);return}
+    if(n.t){say(n);save();return}
+    st.i++;
+  }
+}
+
+function say(n){
+  const who=n.n===H?(st.named?'하랑':'???'):(n.n||'');
+  if(n.f)yFace=n.f;portrait(n.n===H?'h':n.n==='엄마'?'m':'y',who);
+  $('name').textContent=who;
+  const tx=$('text');tx.className=who?'':'mono';
+  full=n.t;tx.textContent='';$('next').classList.remove('on');
+  st.log.push([who,n.t]);if(st.log.length>200)st.log.shift();
+  let k=0;clearInterval(typing);
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(reduce){tx.textContent=full;$('next').classList.add('on');typing=null;return}
+  typing=setInterval(()=>{k++;tx.textContent=full.slice(0,k);if(who)typeBlip();if(k>=full.length){clearInterval(typing);typing=null;$('next').classList.add('on');scheduleAuto()}},32);
+}
+
+function advance(){
+  if(busy||$('title').classList.contains('on'))return;
+  if(typing){clearInterval(typing);typing=null;$('text').textContent=full;$('next').classList.add('on');return}
+  st.i++;step();
+}
+
+let tmr=null,tTick=null;
+function showChoice(n){
+  busy=true;const c=$('choices');
+  c.innerHTML=(n.timer?'<div id="timer"></div>':'')+n.choice.map((o,j)=>`<button data-j="${j}" data-k="${Object.keys(o.set)[0]}">${o.t}</button>`).join('');
+  c.classList.add('on');sfx('choice');
+  const pick=j=>{clearTimeout(tmr);clearInterval(tTick);sfx('pick');const o=n.choice[j];for(const k in o.set)st[k]+=o.set[k];c.classList.remove('on');busy=false;st.log.push(['선택',o.t]);st.i=labels[o.go];step()};
+  c.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.stopPropagation();pick(+b.dataset.j)});
+  if(n.timer){tTick=setInterval(()=>sfx('tick'),1000);const t=$('timer');t.animate([{transform:'scaleX(1)'},{transform:'scaleX(0)'}],{duration:n.timer*1000,fill:'forwards'});tmr=setTimeout(()=>pick(n.def),n.timer*1000)}
+  c.querySelector('button').focus();
+}
+
+function showEnd(n){
+  const clear=st.trust>=st.mask,[mm,mt]=n.max,last=n.final||!S[st.i+1];
+  let got=[];try{got=JSON.parse(localStorage.getItem('hr-endings')||'[]')}catch(e){}
+  if(n.ending&&!got.includes(n.ending)){got.push(n.ending);try{localStorage.setItem('hr-endings',JSON.stringify(got))}catch(e){}}
+  const ALL=['두 사람 몫의 사당','비밀 동거','완벽한 아들','신의 몫'];
+  $('endIn').innerHTML=`<h2>${n.ch}</h2><p class="sub">${n.ending?n.kind:'— '+n.end+'장 끝 —'}</p>
+  <div class="meter"><div><span>가면</span><span>${st.mask} / ${mm}</span></div><div class="bar"><i style="width:${Math.min(100,st.mask/mm*100)}%;background:#9aa6b8"></i></div></div>
+  <div class="meter"><div><span>믿음</span><span>${st.trust} / ${mt}</span></div><div class="bar"><i style="width:${Math.min(100,st.trust/mt*100)}%;background:var(--blue)"></i></div></div>
+  <blockquote>${clear?n.good:n.bad}</blockquote>
+  <p>${last?n.next:'다음: '+n.next}</p>${n.ending?`<p class="sub">엔딩 수집 ${got.length} / 4 · ${ALL.map(e=>got.includes(e)?e:'???').join(' · ')}</p>`:''}
+  <div class="row">${last?'':'<button id="bNext">다음 장으로 ▶</button>'}<button id="bAgain">처음부터 다시</button><button id="bHome">타이틀로</button></div>`;
+  $('end').classList.add('on');sfx('end');scene();
+  if(!last){st.i++;save();$('bNext').onclick=()=>{$('end').classList.remove('on');scene();step()};$('bNext').focus()}
+  else{try{localStorage.removeItem('hr-save')}catch(e){}}
+  $('bAgain').onclick=()=>{$('end').classList.remove('on');start()};
+  $('bHome').onclick=()=>{$('end').classList.remove('on');toTitle()};
+}
+
+function start(saved){
+  Object.assign(st,{i:0,mask:0,trust:0,susp:0,named:0,bg:'',rain:0,sprite:null,faint:0,phone:null,call:null,win:0,time:null,dday:42,cg:null,log:[]},saved||{});
+  $('title').classList.remove('on');auStart();
+  if(saved){apply({});render();const n=S[st.i];if(n&&n.t)say(n);else step()}else step();
+}
+function toTitle(){clearInterval(typing);$('title').classList.add('on');scene();$('bCont').hidden=!load();tLast=0;setTimeout(()=>$('bNew').focus({preventScroll:true}),50)}
+
+$('box').onclick=advance;
+$('scene').addEventListener('click',e=>{if(!e.target.closest('#choices'))advance()});
+addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){if(document.activeElement&&document.activeElement.tagName==='BUTTON')return;e.preventDefault();advance()}});
+$('bNew').onclick=()=>start();
+$('bCont').onclick=()=>start(load());
+$('bTitle').onclick=e=>{e.stopPropagation();toTitle()};
+$('bLog').onclick=e=>{e.stopPropagation();$('logIn').innerHTML=st.log.map(([w,t])=>`<p>${w?`<span>${w}</span>`:''}${t.replace(/\n/g,'<br>')}</p>`).join('')||'<p>아직 기록이 없어요.</p>';$('log').classList.add('on');const li=$('logIn');li.scrollTop=li.scrollHeight};
+$('bAuto').onclick=e=>{e.stopPropagation();autoOn=!autoOn;$('bAuto').classList.toggle('on',autoOn);scheduleAuto()};
+addEventListener('resize',fit);
+$('bSnd').onclick=e=>{e.stopPropagation();auStart();setSound(!AU.on)};
+$('bLogX').onclick=()=>$('log').classList.remove('on');
+$('bCont').hidden=!load();
+
+
+/* ---- 소리: 전부 브라우저에서 합성 ---- */
+const AU={ctx:null,on:true,started:false,nextBeat:0,step:0,timer:null,tick:null,ring:null};
+try{AU.on=localStorage.getItem('hr-sound')!=='off'}catch(e){}
+const N=m=>440*Math.pow(2,(m-69)/12);
+function auInit(){
+  if(AU.ctx)return true;const C=window.AudioContext||window.webkitAudioContext;if(!C)return false;
+  const c=AU.ctx=new C();AU.master=c.createGain();AU.master.gain.value=AU.on?.9:0;AU.master.connect(c.destination);
+  AU.comp=c.createDynamicsCompressor();AU.comp.connect(AU.master);
+  // 잔향 (짧은 노이즈 임펄스)
+  const len=c.sampleRate*2.4,ir=c.createBuffer(2,len,c.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3)}
+  AU.verb=c.createConvolver();AU.verb.buffer=ir;AU.verbIn=c.createGain();AU.verbIn.gain.value=.5;AU.verbIn.connect(AU.verb);AU.verb.connect(AU.comp);
+  AU.music=c.createGain();AU.music.gain.value=0;AU.music.connect(AU.comp);AU.music.connect(AU.verbIn);
+  AU.sfx=c.createGain();AU.sfx.gain.value=.8;AU.sfx.connect(AU.comp);
+  // 빗소리
+  const nb=c.createBuffer(1,c.sampleRate*3,c.sampleRate),nd=nb.getChannelData(0);let last=0;
+  for(let i=0;i<nd.length;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;nd[i]=w*.5+last*3}
+  const rs=c.createBufferSource();rs.buffer=nb;rs.loop=true;
+  const bp=c.createBiquadFilter();bp.type='lowpass';bp.frequency.value=2600;const hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=380;
+  AU.rain=c.createGain();AU.rain.gain.value=0;rs.connect(bp);bp.connect(hp);hp.connect(AU.rain);AU.rain.connect(AU.comp);rs.start();
+  // 형광등 웅웅거림 (독서실)
+  AU.hum=c.createGain();AU.hum.gain.value=0;AU.hum.connect(AU.comp);
+  [120,240,360].forEach((f,i)=>{const o=c.createOscillator();o.frequency.value=f;const g=c.createGain();g.gain.value=[.5,.22,.08][i];o.connect(g);g.connect(AU.hum);o.start()});
+  return true;
+}
+function auStart(){if(!auInit())return;if(AU.ctx.state==='suspended')AU.ctx.resume();if(!AU.started){AU.started=true;AU.nextBeat=AU.ctx.currentTime+.1;AU.timer=setInterval(sched,60)}scene()}
+function ramp(g,v,t=1.2){if(!g)return;const n=AU.ctx.currentTime;g.gain.cancelScheduledValues(n);g.gain.setValueAtTime(g.gain.value,n);g.gain.linearRampToValueAtTime(v,n+t)}
+// 장면별 섞기
+const MIX={'':[.55,0,0],study:[0,0,.05],alley:[.42,.16,0],shrine:[.55,.12,0],hall:[.3,.07,0],room:[.5,.1,0],oneroom:[.5,0,0]};
+function scene(){
+  if(!AU.ctx)return;const titleOn=$('title').classList.contains('on'),endOn=$('end').classList.contains('on');
+  const m=titleOn?[.5,0,0]:endOn?[.45,0,0]:(MIX[st.bg]||MIX['']);
+  ramp(AU.music,m[0],2.5);ramp(AU.rain,titleOn?0:(st.rain?Math.max(m[1],.08):0),1.5);ramp(AU.hum,titleOn?0:m[2],1.5);
+  clearInterval(AU.tick);if(!titleOn&&st.bg==='study')AU.tick=setInterval(()=>blip(2400,.012,.05,'square'),1000);
+  if(st.call&&!AU.ring){AU.ring=setInterval(ringOnce,2600);ringOnce()}else if(!st.call&&AU.ring){clearInterval(AU.ring);AU.ring=null}
+}
+// 배경음악: A단조, Am F C G / Am F Dm E, 느린 아르페지오 + 패드 + 종소리 선율
+const CH=[[57,60,64],[53,57,60],[48,55,60],[55,59,62],[57,60,64],[53,57,60],[50,57,62],[52,56,59]];
+const MEL=[76,,74,,72,,,,72,,71,,67,,,,69,,72,,76,,74,,72,,,,71,,,,
+           76,,79,,77,,76,,74,,72,,74,,,,72,,71,,69,,,,68,,,,,,,,];
+const BEAT=60/62/2;
+function sched(){
+  const c=AU.ctx;while(AU.nextBeat<c.currentTime+.4){
+    const s=AU.step,t=AU.nextBeat,bar=Math.floor(s/8)%8,ch=CH[bar];
+    if(s%8===0){ch.forEach(n=>pad(N(n),t,BEAT*8));bass(N(ch[0]-12),t,BEAT*8)}
+    arp(N(ch[[0,1,2,1,0,2,1,2][s%8]]+12),t);
+    const m=MEL[s%64];if(m)bell(N(m),t);
+    AU.step++;AU.nextBeat+=BEAT}
+}
+function env(g,t,a,peak,d){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d)}
+function pad(f,t,dur){const c=AU.ctx,g=c.createGain(),lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=900;
+  [-6,6].forEach(dt=>{const o=c.createOscillator();o.type='triangle';o.frequency.value=f;o.detune.value=dt;o.connect(lp);o.start(t);o.stop(t+dur+.5)});
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.05,t+1.2);g.gain.linearRampToValueAtTime(.035,t+dur-.4);g.gain.linearRampToValueAtTime(0,t+dur+.4);lp.connect(g);g.connect(AU.music)}
+function bass(f,t,dur){const c=AU.ctx,o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(AU.music);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.09,t+.3);g.gain.linearRampToValueAtTime(0,t+dur);o.start(t);o.stop(t+dur+.1)}
+function arp(f,t){const c=AU.ctx,o=c.createOscillator(),g=c.createGain(),lp=c.createBiquadFilter();o.type='square';o.frequency.value=f;lp.type='lowpass';lp.frequency.value=1400;
+  o.connect(lp);lp.connect(g);g.connect(AU.music);env(g,t,.005,.018,.5);o.start(t);o.stop(t+.6)}
+function bell(f,t){const c=AU.ctx,g=c.createGain();g.connect(AU.music);env(g,t,.004,.07,2.2);
+  [[1,1],[2.76,.25],[5.4,.08]].forEach(([r,a])=>{const o=c.createOscillator(),gg=c.createGain();o.frequency.value=f*r;gg.gain.value=a;o.connect(gg);gg.connect(g);o.start(t);o.stop(t+2.4)})}
+// 효과음
+function blip(f,v=.04,d=.05,type='sine',when=0){if(!AU.ctx||!AU.on)return;const c=AU.ctx,t=c.currentTime+when,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;o.connect(g);g.connect(AU.sfx);env(g,t,.003,v,d);o.start(t);o.stop(t+d+.05)}
+function noiseHit(v,d,freq,when=0,q=1){if(!AU.ctx||!AU.on)return;const c=AU.ctx,t=c.currentTime+when,b=c.createBuffer(1,c.sampleRate*d,c.sampleRate),x=b.getChannelData(0);
+  for(let i=0;i<x.length;i++)x[i]=(Math.random()*2-1)*Math.pow(1-i/x.length,4);const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();
+  s.buffer=b;f.type='bandpass';f.frequency.value=freq;f.Q.value=q;g.gain.value=v;s.connect(f);f.connect(g);g.connect(AU.sfx);s.start(t)}
+function ringOnce(){for(let k=0;k<2;k++){const w=k*.45;[0,.12,.24].forEach(d=>{blip(1320,.035,.09,'triangle',w+d);blip(1660,.025,.09,'triangle',w+d+.06)})}}
+const SFX={
+  buzz(){for(let k=0;k<2;k++){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime+k*.5,o=c.createOscillator(),l=c.createOscillator(),lg=c.createGain(),g=c.createGain();
+    o.type='square';o.frequency.value=150;l.frequency.value=32;lg.gain.value=.5;l.connect(lg);lg.connect(g.gain);o.connect(g);g.connect(AU.sfx);
+    g.gain.setValueAtTime(.05,t);g.gain.setValueAtTime(0,t+.32);o.start(t);l.start(t);o.stop(t+.35);l.stop(t+.35)}},
+  knock(){noiseHit(.9,.12,900,0,2);noiseHit(.9,.12,850,.38,2);blip(180,.08,.08,'sine');blip(170,.08,.08,'sine',.38)},
+  appear(){[69,72,76,81].forEach((m,i)=>blip(N(m+12),.03,1.4,'sine',i*.09))},
+  named(){[76,81,84,88,93].forEach((m,i)=>blip(N(m),.045,1.8,'sine',i*.07));noiseHit(.15,1.2,6000,0,.5)},
+  glitch(){for(let k=0;k<6;k++){noiseHit(.5,.05,400+Math.random()*3000,k*.06,4);blip(80+Math.random()*200,.05,.04,'square',k*.06)}},
+  choice(){blip(N(81),.04,.25,'triangle');blip(N(88),.035,.35,'triangle',.08)},
+  pick(){blip(N(76),.05,.12,'square');blip(N(84),.04,.2,'triangle',.05)},
+  tick(){blip(1800,.03,.03,'square')},
+  door(){noiseHit(.6,.35,200,0,.7);blip(90,.1,.25,'sine')},
+  end(){[57,64,69,72,76].forEach((m,i)=>blip(N(m),.04,3,'triangle',i*.12))}
+};
+function sfx(k){if(AU.ctx&&AU.on&&SFX[k])SFX[k]()}
+let typeN=0;function typeBlip(){if(++typeN%3===0)blip(620+Math.random()*60,.012,.03,'triangle')}
+function setSound(on){AU.on=on;try{localStorage.setItem('hr-sound',on?'on':'off')}catch(e){}$('bSnd').classList.toggle('on',on);if(AU.ctx)ramp(AU.master,on?.9:0,.3)}
+addEventListener('pointerdown',()=>{auStart()},{once:true});
+addEventListener('keydown',()=>{auStart()},{once:true});
+
+/* ---- 픽셀 타이틀 화면 ---- */
+const tcv=$('tcv'),tc=tcv.getContext('2d');
+let TW=320,TH=180,tBg=null,tLogo=null,tStars=[],tRain=[],tLast=0,tFrame=0,logoY=0;
+const BAYER=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+const rnd=(()=>{let x=7;return()=>{x=(x*16807)%2147483647;return x/2147483647}})();
+const hex=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+function dpick(pal,v,x,y){const n=pal.length-1,f=Math.max(0,Math.min(n,v*n)),i=Math.floor(f),fr=f-i;return pal[Math.min(n,i+(fr>(BAYER[(y&3)*4+(x&3)]+.5)/16?1:0))]}
+function makeBg(){
+  const c=document.createElement('canvas');c.width=TW;c.height=TH;const g=c.getContext('2d'),im=g.createImageData(TW,TH),d=im.data;
+  const sky=['#020309','#040814','#081126','#0d1b3a','#132650'].map(hex),moon=['#0c1a38','#18305e','#2d5291','#5279bb','#93b6e4'].map(hex);
+  const portrait=TH>TW,mx=TW/2,my=portrait?TH*.3:TH*.36,R=portrait?TW*.34:TW*.18,lx=-.55,ly=-.65;
+  const craters=[[-.3,-.1,.16],[.25,.2,.12],[.05,-.42,.09],[-.1,.38,.1],[.42,-.25,.07]];
+  for(let y=0;y<TH;y++)for(let x=0;x<TW;x++){
+    const dx=(x-mx)/R,dy=(y-my)/R,r2=dx*dx+dy*dy;let col;
+    if(r2<=1){const dz=Math.sqrt(1-r2);let l=.35+.65*Math.max(0,(-dx*lx-dy*ly)*.6+dz*.55);for(const[cx,cy,cr]of craters){const e=((dx-cx)**2+(dy-cy)**2)/(cr*cr);if(e<1)l-=.18*(1-e)}col=dpick(moon,Math.max(0,Math.min(1,l)),x,y)}
+    else{let v=.15+.75*(y/TH);const h=Math.sqrt(r2);if(h<1.5)v+=.3*(1.5-h);col=dpick(sky,Math.min(1,v),x,y)}
+    const k=(y*TW+x)*4;d[k]=col[0];d[k+1]=col[1];d[k+2]=col[2];d[k+3]=255}
+  g.putImageData(im,0,0);
+  const base=Math.round(TH*.86);g.fillStyle='#03060f';
+  let x=0;while(x<TW){const w=6+Math.floor(rnd()*12),h=6+Math.floor(rnd()*(portrait?40:22));g.fillRect(x,base-h,w,TH-base+h);
+    g.fillStyle='#3f66a6';for(let wy=base-h+3;wy<base-2;wy+=4)for(let wx=x+2;wx<x+w-2;wx+=3)if(rnd()<.12)g.fillRect(wx,wy,1,1);g.fillStyle='#03060f';x+=w}
+  const sx=Math.round(TW*(portrait?.18:.22)),sy=base-3;
+  for(let i=0;i<9;i++)g.fillRect(sx-14+i*2,sy-18+Math.round(i*.6),40-i*4+i*2,1);
+  g.fillRect(sx-8,sy-16,40,3);g.fillRect(sx-4,sy-13,2,14);g.fillRect(sx+24,sy-11,2,12);
+  for(let i=0;i<3;i++)g.fillRect(sx-10-i*3,sy-1+i*2,48+i*6,2);
+  return c;
+}
+function makeLogo(){
+  const portrait=TH>TW,lines=portrait?['네가 보는','동안만']:['네가 보는 동안만'];
+  const fs=portrait?Math.round(TW*.15):Math.round(TW*.082),c=document.createElement('canvas'),g=c.getContext('2d');
+  const font=`700 ${fs}px "Gowun Batang","Nanum Myeongjo",serif`;g.font=font;
+  const w=Math.max(...lines.map(l=>g.measureText(l).width)),lh=Math.round(fs*1.12);
+  c.width=Math.ceil(w+fs*.6+12);c.height=lh*lines.length+Math.round(fs*.5);
+  g.font=font;g.textBaseline='alphabetic';g.lineJoin='round';
+  lines.forEach((ln,i)=>{
+    const lw=g.measureText(ln).width,x=Math.round((c.width-lw)/2+fs*.12),y=Math.round(fs*.95+i*lh);
+    g.setTransform(1,0,-.14,1,fs*.12,0);
+    for(let k=4;k>=1;k--){g.fillStyle=k>2?'#020611':'#06102a';g.fillText(ln,x+k,y+k)}
+    g.lineWidth=4;g.strokeStyle='#0b1a42';g.strokeText(ln,x,y);
+    g.lineWidth=2;g.strokeStyle='#28509c';g.strokeText(ln,x,y);
+    const gr=g.createLinearGradient(0,y-fs*.82,0,y+fs*.12);
+    gr.addColorStop(0,'#ffffff');gr.addColorStop(.42,'#d6e9ff');gr.addColorStop(.46,'#ffffff');gr.addColorStop(.5,'#8db6ee');gr.addColorStop(1,'#3c69bd');
+    g.fillStyle=gr;g.fillText(ln,x,y);g.setTransform(1,0,0,1,0,0)});
+  const im=g.getImageData(0,0,c.width,c.height),d=im.data;for(let k=3;k<d.length;k+=4)d[k]=d[k]<110?0:255;g.putImageData(im,0,0);
+  return c;
+}
+function titleLayout(){
+  const vw=innerWidth,vh=innerHeight;TW=vw>=vh?320:200;TH=Math.round(TW*vh/vw);tcv.width=TW;tcv.height=TH;
+  tBg=makeBg();tLogo=makeLogo();
+  logoY=Math.round((TH>TW?TH*.3:TH*.36)-tLogo.height/2);
+  $('title').style.setProperty('--menu-top',Math.round((logoY+tLogo.height+(TH>TW?34:22))/TH*100)+'%');
+  tStars=Array.from({length:TH>TW?22:18},()=>({x:Math.floor(rnd()*TW),y:Math.floor(rnd()*TH*.8),p:Math.floor(rnd()*8)}));
+  tRain=Array.from({length:Math.round(TW*TH/700)},()=>({x:rnd()*TW,y:rnd()*TH,v:3+rnd()*2}));
+}
+function star(x,y,s){tc.fillStyle='#7fb0f0';if(s>=1){tc.fillRect(x-1,y,3,1);tc.fillRect(x,y-1,1,3)}if(s>=2){tc.fillRect(x-3,y,7,1);tc.fillRect(x,y-3,1,7);tc.fillStyle='#cfe5ff';tc.fillRect(x-1,y,3,1);tc.fillRect(x,y-1,1,3)}tc.fillStyle='#f2f8ff';tc.fillRect(x,y,1,1)}
+function drawTitle(t){
+  if(!$('title').classList.contains('on')){requestAnimationFrame(drawTitle);return}
+  if(t-tLast>90||!tLast){tLast=t;tFrame++;
+    tc.drawImage(tBg,0,0);
+    const by=logoY+Math.round(tLogo.height*.45);tc.fillStyle='rgba(110,160,240,.10)';tc.fillRect(0,by-10,TW,20);tc.fillStyle='rgba(150,195,255,.10)';tc.fillRect(0,by-4,TW,8);tc.fillStyle='rgba(190,220,255,.18)';tc.fillRect(0,by,TW,1);
+    tc.fillStyle='rgba(120,160,230,.55)';
+    for(const r of tRain){tc.fillRect(Math.round(r.x),Math.round(r.y),1,3);if(!reduceRain){r.y+=r.v;r.x-=.6;if(r.y>TH){r.y=-4;r.x=rnd()*(TW+20)}}}
+    for(const s of tStars){const ph=(s.p+tFrame)%8;star(s.x,s.y,ph<3?ph:ph<5?2-(ph-3):0)}
+    tc.drawImage(tLogo,Math.round((TW-tLogo.width)/2),logoY);
+    tc.font='8px "Press Start 2P",monospace';tc.textAlign='center';tc.lineWidth=3;tc.strokeStyle='#030714';tc.strokeText('WHILE YOU SEE ME',TW/2,logoY-4);tc.fillStyle='#bcd6f7';tc.fillText('WHILE YOU SEE ME',TW/2,logoY-4);
+  }
+  requestAnimationFrame(drawTitle);
+}
+const reduceRain=matchMedia('(prefers-reduced-motion:reduce)').matches;
+titleLayout();addEventListener('resize',titleLayout);
+if(document.fonts){document.fonts.load('700 20px "Gowun Batang"').then(()=>{tLogo=makeLogo();tLast=0}).catch(()=>{});document.fonts.load('8px "Press Start 2P"').then(()=>{tLast=0}).catch(()=>{})}
+requestAnimationFrame(drawTitle);
+function pressStart(e){const t=$('title');if(!t.classList.contains('wait'))return;if(e)e.stopPropagation();t.classList.remove('wait');auStart();sfx('pick');setTimeout(()=>$('bNew').focus({preventScroll:true}),30)}
+$('title').addEventListener('pointerdown',pressStart);
+addEventListener('keydown',e=>{if($('title').classList.contains('wait')){e.preventDefault();pressStart()}},true);
+fit();
+$('bSnd').classList.toggle('on',AU.on);
+$('title').addEventListener('keydown',e=>{if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;const bs=[...document.querySelectorAll('.tmenu button:not([hidden])')];const i=bs.indexOf(document.activeElement);bs.at((i+(e.key==='ArrowDown'?1:-1)+bs.length)%bs.length).focus();e.preventDefault()});
+const cv=$('rain'),cx=cv.getContext('2d');let drops=[];
+const rs=()=>{const sc=$('scene');cv.width=sc.clientWidth*2;cv.height=sc.clientHeight*2;drops=Array.from({length:Math.round(sc.clientWidth/5)},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,v:14+Math.random()*12,l:14+Math.random()*22}))};
+addEventListener('resize',rs);rs();
+(function loop(){
+  if(st.rain){cx.clearRect(0,0,cv.width,cv.height);cx.strokeStyle='rgba(180,210,255,.32)';cx.lineWidth=1.2*devicePixelRatio;cx.beginPath();
+    for(const d of drops){cx.moveTo(d.x,d.y);cx.lineTo(d.x-d.l*.18,d.y+d.l*devicePixelRatio);if(!reduceRain){d.y+=d.v*devicePixelRatio;d.x-=d.v*.18;if(d.y>cv.height){d.y=-30;d.x=Math.random()*cv.width*1.1}}}cx.stroke()}
+  requestAnimationFrame(loop)})();
+}
+</script>
+</body>
+</html>
