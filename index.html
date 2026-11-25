@@ -687,8 +687,8 @@ function noiseHit(v,d,freq,when=0,q=1){if(!AU.ctx||!AU.on)return;const c=AU.ctx,
 function ringOnce(){for(let k=0;k<2;k++){const w=k*.45;[0,.12,.24].forEach(d=>{blip(1320,.035,.09,'triangle',w+d);blip(1660,.025,.09,'triangle',w+d+.06)})}}
 const SFX={
   buzz(){for(let k=0;k<2;k++){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime+k*.5,o=c.createOscillator(),l=c.createOscillator(),lg=c.createGain(),g=c.createGain();
-    o.type='square';o.frequency.value=150;l.frequency.value=32;lg.gain.value=.5;l.connect(lg);lg.connect(g.gain);o.connect(g);g.connect(AU.sfx);
-    g.gain.setValueAtTime(.05,t);g.gain.setValueAtTime(0,t+.32);o.start(t);l.start(t);o.stop(t+.35);l.stop(t+.35)}},
+    o.type='square';o.frequency.value=150;l.frequency.value=32;lg.gain.value=.012;l.connect(lg);lg.connect(g.gain);o.connect(g);g.connect(AU.sfx);
+    g.gain.setValueAtTime(.018,t);g.gain.setValueAtTime(0,t+.32);o.start(t);l.start(t);o.stop(t+.35);l.stop(t+.35)}},
   knock(){noiseHit(.9,.12,900,0,2);noiseHit(.9,.12,850,.38,2);blip(180,.08,.08,'sine');blip(170,.08,.08,'sine',.38)},
   appear(){[69,72,76,81].forEach((m,i)=>blip(N(m+12),.03,1.4,'sine',i*.09))},
   named(){[76,81,84,88,93].forEach((m,i)=>blip(N(m),.045,1.8,'sine',i*.07));noiseHit(.15,1.2,6000,0,.5)},
